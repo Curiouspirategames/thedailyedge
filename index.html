@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Daily Edge</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0608;--surface:#130d10;--surface2:#1e1318;--border:#3a2030;
+    --accent:#e8547a;--accent2:#ff8fab;--gold:#d4a853;
+    --text:#f0e6ea;--text-dim:#9a7a84;--text-muted:#5a3a44;
+    --success:#7ecba0;--fail:#e85454;
+    --green:#4caf76;--amber:#e0a030;--red:#e04040;--blue:#5b9bd5;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Space Mono',monospace;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    padding:24px 16px 48px;overflow-x:hidden;}
+  body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
+    background:radial-gradient(ellipse at 60% 20%,rgba(232,84,122,.07) 0%,transparent 50%),
+               radial-gradient(ellipse at 20% 80%,rgba(194,58,90,.05) 0%,transparent 40%);
+    pointer-events:none;}
+  .container{width:100%;max-width:460px;position:relative;z-index:1;}
+
+  header{text-align:center;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--border);}
+  .logo{font-family:'Cormorant Garamond',serif;font-size:2.6rem;font-weight:300;letter-spacing:.12em;line-height:1;margin-bottom:4px;}
+  .logo span{color:var(--accent);font-style:italic;}
+  .subtitle{font-size:.55rem;letter-spacing:.3em;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;}
+  .day-badge{display:inline-block;font-size:.58rem;letter-spacing:.2em;color:var(--gold);border:1px solid var(--gold);padding:3px 10px;text-transform:uppercase;}
+
+  .stage-track{display:flex;gap:4px;margin-bottom:20px;justify-content:center;}
+  .stage-pip{width:26px;height:6px;background:var(--surface2);border:1px solid var(--border);transition:all .4s ease;}
+  .stage-pip.complete-green{background:var(--green);border-color:var(--green);box-shadow:0 0 6px rgba(76,175,118,.5);}
+  .stage-pip.complete-amber{background:var(--amber);border-color:var(--amber);box-shadow:0 0 6px rgba(224,160,48,.5);}
+  .stage-pip.complete-red  {background:var(--red);  border-color:var(--red);  box-shadow:0 0 6px rgba(224,64,64,.5);}
+  .stage-pip.complete-none {background:#2a1a20;border-color:#3a2028;}
+  .stage-pip.active{border-color:var(--accent2);animation:pipPulse 1s ease-in-out infinite;}
+  .stage-pip.stopped{background:var(--fail);border-color:var(--fail);}
+  .stage-pip.came{background:var(--blue);border-color:var(--blue);box-shadow:0 0 6px rgba(91,155,213,.5);}
+  @keyframes pipPulse{0%,100%{box-shadow:0 0 4px rgba(255,143,171,.3);}50%{box-shadow:0 0 12px rgba(255,143,171,.8);}}
+
+  .card{background:var(--surface);border:1px solid var(--border);padding:26px 22px;margin-bottom:14px;position:relative;}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:opacity .5s;}
+  .card.live::before{opacity:1;}
+
+  .welcome-text{font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:300;line-height:1.75;color:var(--text-dim);margin-bottom:18px;}
+  .welcome-text em{color:var(--accent2);font-style:italic;}
+  .rules-list{list-style:none;margin-bottom:6px;}
+  .rules-list li{font-size:.6rem;letter-spacing:.04em;color:var(--text-dim);padding:7px 0;border-bottom:1px solid var(--surface2);display:flex;gap:10px;line-height:1.55;}
+  .rules-list li::before{content:'—';color:var(--accent);flex-shrink:0;}
+  .rules-list li.rule-key{color:var(--text);}
+  .rules-list li.rule-key::before{content:'✦';color:var(--accent2);}
+
+  .stage-number{font-size:.52rem;letter-spacing:.3em;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;}
+  .stage-title{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:300;color:var(--accent2);font-style:italic;margin-bottom:20px;text-align:center;}
+
+  .intensity-wrap{margin-bottom:24px;}
+  .intensity-label{font-size:.48rem;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase;margin-bottom:6px;display:flex;justify-content:space-between;}
+  .intensity-track{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+  .intensity-fill{height:100%;border-radius:2px;transition:width .8s ease,background .8s ease;}
+
+  .metro-section{display:flex;flex-direction:column;align-items:center;
+    padding:28px 0 20px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+    margin-bottom:0;position:relative;}
+
+  .radar-wrap{position:relative;width:160px;height:160px;
+    display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+  .radar-outer{position:absolute;inset:0;border-radius:50%;border:2px solid var(--border);}
+  .radar-ring{position:absolute;border-radius:50%;border:2px solid var(--accent);
+    opacity:0;width:20px;height:20px;pointer-events:none;}
+  .radar-ring.fire{animation:radarExpand var(--beat-dur,600ms) ease-out forwards;}
+  @keyframes radarExpand{
+    0%  {width:20px;height:20px;opacity:1;border-color:var(--accent);border-width:3px;}
+    70% {opacity:.5;}
+    100%{width:158px;height:158px;opacity:0;border-color:var(--accent2);border-width:1px;}
+  }
+  .radar-core{width:20px;height:20px;border-radius:50%;background:var(--accent);
+    position:relative;z-index:1;box-shadow:0 0 16px rgba(232,84,122,.8);}
+  .radar-core.pop{animation:corePop .1s ease-out forwards;}
+  @keyframes corePop{0%{transform:scale(1);}50%{transform:scale(1.9);}100%{transform:scale(1);}}
+
+  .metro-bpm-row{display:flex;align-items:baseline;gap:6px;margin-bottom:4px;}
+  .metro-bpm{font-size:2.6rem;font-weight:700;color:var(--text);letter-spacing:-.02em;line-height:1;}
+  .metro-bpm-unit{font-size:.55rem;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase;}
+
+  .speed-indicator{position:absolute;top:12px;right:12px;
+    font-size:.58rem;letter-spacing:.2em;text-transform:uppercase;font-weight:700;
+    padding:4px 10px;border:1px solid;opacity:0;transition:opacity .25s;}
+  .speed-indicator.show{opacity:1;}
+  .speed-indicator.faster{color:var(--fail);border-color:var(--fail);}
+  .speed-indicator.slower{color:var(--success);border-color:var(--success);}
+
+  .metro-mute{margin-top:10px;background:none;border:1px solid var(--border);color:var(--text-muted);
+    font-family:'Space Mono',monospace;font-size:.46rem;letter-spacing:.1em;
+    padding:5px 12px;cursor:pointer;transition:all .2s;}
+  .metro-mute:hover{border-color:var(--text-dim);color:var(--text-dim);}
+  .metro-mute.muted{opacity:.35;}
+
+  .tl-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(10,6,8,.94);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;animation:fadeIn .2s ease;}
+  .tl-prompt{font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-style:italic;
+    color:var(--text-dim);margin-bottom:8px;text-align:center;padding:0 28px;line-height:1.5;}
+  .tl-sub{font-size:.52rem;letter-spacing:.15em;color:var(--text-muted);text-transform:uppercase;margin-bottom:28px;}
+  .tl-btns{display:flex;gap:22px;margin-bottom:16px;}
+  .tl-btn{width:78px;height:78px;border-radius:50%;border:3px solid;background:transparent;
+    font-size:1.7rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;}
+  .tl-btn:hover{transform:scale(1.1);}
+  .tl-green{border-color:var(--green);}.tl-green:hover{background:rgba(76,175,118,.2);}
+  .tl-amber{border-color:var(--amber);}.tl-amber:hover{background:rgba(224,160,48,.2);}
+  .tl-red  {border-color:var(--red);  }.tl-red:hover  {background:rgba(224,64,64,.2);}
+  .tl-hints{display:flex;gap:22px;margin-bottom:18px;}
+  .tl-hint{width:78px;font-size:.42rem;letter-spacing:.06em;color:var(--text-muted);text-align:center;line-height:1.4;text-transform:uppercase;}
+  .tl-skip{font-size:.5rem;letter-spacing:.15em;color:var(--text-muted);text-transform:uppercase;
+    background:none;border:none;cursor:pointer;font-family:'Space Mono',monospace;margin-bottom:10px;}
+  .tl-skip:hover{color:var(--text-dim);}
+  .tl-edged{display:block;width:220px;margin:0 auto 14px;padding:10px 16px;
+    border:1px solid var(--accent);background:transparent;color:var(--accent);
+    font-family:'Space Mono',monospace;font-size:.5rem;letter-spacing:.14em;text-transform:uppercase;
+    cursor:pointer;transition:all .2s;}
+  .tl-edged:hover{background:var(--accent);color:var(--bg);}
+  .day-info{font-size:.52rem;letter-spacing:.1em;color:var(--text-muted);text-align:center;margin-top:10px;line-height:1.8;}
+  .day-info span{color:var(--text-dim);}
+  .tl-bar-wrap{width:180px;height:2px;background:var(--surface2);}
+  .tl-bar{height:100%;background:var(--accent2);}
+
+  .final-card{background:var(--surface);border:1px solid var(--accent);padding:32px 24px;margin-bottom:14px;position:relative;text-align:center;}
+  .final-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);}
+  .final-title{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:300;color:var(--accent2);font-style:italic;margin-bottom:16px;line-height:1.2;}
+  .final-text{font-family:'Cormorant Garamond',serif;font-size:1.15rem;line-height:1.85;color:var(--text);}
+  .final-text em{color:var(--accent2);font-style:italic;}
+
+  .btn{display:block;width:100%;padding:13px 20px;border:1px solid;background:transparent;
+    font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;
+    cursor:pointer;transition:all .2s;margin-bottom:10px;}
+  .btn-primary{border-color:var(--accent);color:var(--accent);}
+  .btn-primary:hover{background:var(--accent);color:var(--bg);}
+  .btn-edged{border-color:var(--accent);color:var(--accent);}
+  .btn-edged:hover{background:var(--accent);color:var(--bg);}
+  .btn-came{border-color:var(--blue);color:var(--blue);}
+  .btn-came:hover{background:var(--blue);color:var(--bg);}
+  .btn-reset{border-color:var(--border);color:var(--text-muted);font-size:.52rem;padding:9px 16px;}
+  .btn-reset:hover{border-color:var(--text-dim);color:var(--text-dim);}
+  .btn-gold{border-color:var(--gold);color:var(--gold);}
+  .btn-gold:hover{background:var(--gold);color:var(--bg);}
+
+  .result-top{text-align:center;margin-bottom:16px;}
+  .result-big{font-family:'Cormorant Garamond',serif;font-size:4.5rem;font-weight:300;line-height:1;color:var(--accent);}
+  .result-big span{font-size:1.8rem;color:var(--text-muted);}
+  .result-badge{display:inline-block;font-size:.58rem;letter-spacing:.18em;text-transform:uppercase;padding:4px 12px;border:1px solid;margin-top:8px;}
+  .badge-completed{color:var(--success);border-color:var(--success);}
+  .badge-edged    {color:var(--accent); border-color:var(--accent);}
+  .badge-came     {color:var(--blue);   border-color:var(--blue);}
+  .result-msg{font-family:'Cormorant Garamond',serif;font-size:1.08rem;font-style:italic;color:var(--text-dim);text-align:center;line-height:1.6;padding:0 6px;margin-bottom:16px;}
+
+  .colour-row{display:flex;justify-content:center;gap:5px;margin-bottom:4px;}
+  .colour-pip{width:28px;height:28px;border-radius:50%;border:2px solid;display:flex;align-items:center;justify-content:center;font-size:.65rem;}
+  .cp-green{background:rgba(76,175,118,.2); border-color:var(--green);color:var(--green);}
+  .cp-amber{background:rgba(224,160,48,.2); border-color:var(--amber);color:var(--amber);}
+  .cp-red  {background:rgba(224,64,64,.2);  border-color:var(--red);  color:var(--red);}
+  .cp-blue {background:rgba(91,155,213,.2); border-color:var(--blue); color:var(--blue);}
+  .cp-none {background:var(--surface2);border-color:var(--border);color:var(--text-muted);}
+  .cp-stop {background:rgba(232,84,122,.1); border-color:var(--fail);color:var(--fail);}
+  .cp-empty{background:var(--surface2);border-color:#1e1318;color:var(--text-muted);opacity:.4;}
+
+  .share-box{background:var(--surface2);border:1px solid var(--border);padding:14px 16px;margin-bottom:12px;
+    font-family:'Space Mono',monospace;font-size:.6rem;color:var(--text-dim);text-align:center;line-height:2;}
+  .share-divider{display:block;color:var(--text-muted);}
+  .share-emoji-row{font-size:1.1rem;letter-spacing:.1em;display:block;margin:2px 0;}
+  .copy-confirm{font-size:.52rem;letter-spacing:.2em;color:var(--success);text-align:center;margin-top:6px;opacity:0;transition:opacity .3s;text-transform:uppercase;}
+  .copy-confirm.show{opacity:1;}
+
+  .already-wrap{text-align:center;padding:18px 0;}
+  .already-emoji{font-size:2.8rem;display:block;margin-bottom:12px;}
+  .already-title{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-style:italic;color:var(--text-dim);margin-bottom:8px;}
+  .reset-countdown{font-size:.58rem;letter-spacing:.1em;color:var(--text-muted);}
+  #resetTimer{color:var(--accent2);}
+
+  .divider{border:none;border-top:1px solid var(--border);margin:13px 0;}
+  .small-note{font-size:.52rem;letter-spacing:.08em;color:var(--text-muted);text-align:center;line-height:1.6;}
+  .hidden{display:none!important;}
+  .fade-in{animation:fadeIn .35s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">The Daily <span>Edge</span></div>
+    <div class="subtitle">A daily denial challenge</div>
+    <div class="day-badge" id="dayBadge">Day —</div>
+  </header>
+
+  <div class="stage-track" id="stageTrack"></div>
+
+  <div id="scrWelcome" class="fade-in">
+    <div class="card">
+      <p class="welcome-text">Every day, a new sequence. Same challenge for everyone.<br><br>Ten stages. One edge. How far can <em>you</em> go?</p>
+      <ul class="rules-list">
+        <li>One movement per beat — a stroke or a circle, whichever applies to you</li>
+        <li>The metronome controls your speed. Follow it.</li>
+        <li>Stages run straight into each other. No breaks.</li>
+        <li class="rule-key">You get one edge only. When you reach your absolute limit, hold it if you can — or stop. You cannot go over, recover, and build again. One edge. That's the game.</li>
+        <li>The speed changes during stages — watch for the indicator</li>
+        <li>Between stages, rate how you're feeling. You have 10 seconds.</li>
+      </ul>
+    </div>
+    <button class="btn btn-primary" onclick="startGame()">Begin Today's Challenge</button>
+    <p class="small-note">Each stage lasts between 1 and 2 minutes.<br>Gets difficult by stage five. Good luck.</p>
+  </div>
+
+  <div id="scrStage" class="hidden">
+    <div class="card live">
+      <div class="stage-number" id="stageNum"></div>
+      <div class="stage-title"  id="stageTitle"></div>
+      <div class="intensity-wrap">
+        <div class="intensity-label"><span>Intensity</span><span id="intVal"></span></div>
+        <div class="intensity-track"><div class="intensity-fill" id="intFill"></div></div>
+      </div>
+      <div class="metro-section">
+        <div class="speed-indicator" id="speedIndicator"></div>
+        <div class="radar-wrap">
+          <div class="radar-outer"></div>
+          <div class="radar-ring" id="radarRing"></div>
+          <div class="radar-core" id="radarCore"></div>
+        </div>
+        <div class="metro-bpm-row">
+          <div class="metro-bpm" id="metroBpm">—</div>
+          <div class="metro-bpm-unit">bpm</div>
+        </div>
+        <button class="metro-mute" id="metroMuteBtn" onclick="toggleMute()">tap to mute</button>
+      </div>
+    </div>
+    <div style="margin-top:14px;">
+      <button class="btn btn-edged" onclick="playerEdged()">I successfully edged — end the game</button>
+      <button class="btn btn-came"  onclick="playerCame()">I went over the edge</button>
+      <button class="btn btn-reset" onclick="playerReset()">Something came up — start over</button>
+    </div>
+  </div>
+
+  <div id="scrFinalEdge" class="hidden fade-in">
+    <div class="final-card">
+      <div class="final-title">You made it.</div>
+      <p class="final-text">
+        Ten stages. Every beat.<br><br>
+        Now <em>bring yourself to the edge.</em><br><br>
+        Take as long as you need. When you're right at the limit, hold it there for as long as you can. Then stop.
+      </p>
+    </div>
+    <div class="share-box" id="shareFinal"></div>
+    <div class="day-info" id="dayInfoFinal"></div>
+    <button class="btn btn-gold" onclick="doShareFinal()">Copy Result to Share</button>
+    <div class="copy-confirm" id="copyConfirmFinal">Copied ✓</div>
+  </div>
+
+  <div id="scrResult" class="hidden fade-in">
+    <div class="card">
+      <div class="result-top">
+        <div class="result-big" id="resBig">—<span>/10</span></div>
+        <div id="resBadge" class="result-badge"></div>
+      </div>
+      <div class="colour-row" id="colourRow"></div>
+      <div class="divider"></div>
+      <p class="result-msg" id="resMsg"></p>
+      <div class="day-info" id="dayInfo"></div>
+    </div>
+    <div class="share-box" id="shareBox"></div>
+    <button class="btn btn-gold" onclick="doShare()">Copy Result to Share</button>
+    <div class="copy-confirm" id="copyConfirm">Copied ✓</div>
+    <div class="divider"></div>
+    <div class="small-note">New challenge available daily. Come back tomorrow.</div>
+  </div>
+
+  <div id="scrAlready" class="hidden fade-in">
+    <div class="card already-wrap">
+      <span class="already-emoji">🔥</span>
+      <div class="already-title">Already played today.</div>
+      <p class="small-note" style="margin-bottom:14px;">Your score is saved. A new challenge is coming.</p>
+      <div class="reset-countdown">Next challenge in <span id="resetTimer">—</span></div>
+    </div>
+    <div class="divider"></div>
+    <div class="share-box" id="shareBoxReplay"></div>
+    <button class="btn btn-gold" onclick="doShareReplay()">Copy Result to Share</button>
+    <div class="copy-confirm" id="copyConfirmReplay">Copied ✓</div>
+  </div>
+</div>
+
+<div id="tlOverlay" class="tl-overlay hidden">
+  <div class="tl-prompt" id="tlPrompt"></div>
+  <div class="tl-sub">Rate that stage</div>
+  <div class="tl-btns">
+    <button class="tl-btn tl-green" onclick="tlPick('green')">🟢</button>
+    <button class="tl-btn tl-amber" onclick="tlPick('amber')">🟡</button>
+    <button class="tl-btn tl-red"   onclick="tlPick('red')"  >🔴</button>
+  </div>
+  <div class="tl-hints">
+    <div class="tl-hint">Comfortable</div>
+    <div class="tl-hint">Getting difficult</div>
+    <div class="tl-hint">Really struggling</div>
+  </div>
+  <button class="tl-skip" onclick="tlPick(null)">skip →</button>
+  <button class="tl-edged" onclick="tlEdged()">I successfully edged — end the game</button>
+  <div class="tl-bar-wrap"><div class="tl-bar" id="tlBar"></div></div>
+</div>
+
+<script>
+'use strict';
+
+// ─── LAUNCH CONFIG ────────────────────────────────────────────────────────────
+// Set EPOCH to your launch date. Day 1 = first reset period on or after this date.
+// Format: Date.UTC(year, month-1, day, 14)  ← 14 = 14:00 UTC reset hour
+const RESET_HOUR = 14;
+const EPOCH      = new Date(Date.UTC(2025, 0, 1, RESET_HOUR)); // ← change on launch
+
+// ─── DAY / RESET ──────────────────────────────────────────────────────────────
+function periodStart() {
+  const now   = new Date();
+  const reset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), RESET_HOUR));
+  if (now < reset) reset.setUTCDate(reset.getUTCDate() - 1);
+  return reset;
+}
+function dayNum()       { return Math.floor((periodStart() - EPOCH) / 86400000) + 1; }
+function msUntilReset() { const n = new Date(periodStart()); n.setUTCDate(n.getUTCDate()+1); return n - Date.now(); }
+
+// ─── RNG ──────────────────────────────────────────────────────────────────────
+function mkRng(seed) {
+  let s = (seed ^ 0xdeadbeef) >>> 0;
+  return () => { s ^= s<<13; s ^= s>>17; s ^= s<<5; return (s>>>0)/0xffffffff; };
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, Math.round(v))); }
+function lerp(a, b, t)    { return a + (b - a) * t; }
+function vdur(centre, spread, r) { return Math.round(centre + (r()-0.5)*2*spread); }
+
+// ─── DAILY DIFFICULTY MODIFIER ────────────────────────────────────────────────
+// Adds a per-day multiplier that shifts the entire BPM curve.
+// Levels: easy (0.78) / normal (1.0) / hard (1.15) / brutal (1.28, capped)
+// Weights: easy=20%, normal=40%, hard=28%, brutal=12%
+
+const DIFFICULTY_LEVELS = [
+  { name:'easy',   mult:0.78, weight:20 },
+  { name:'normal', mult:1.00, weight:40 },
+  { name:'hard',   mult:1.15, weight:28 },
+  { name:'brutal', mult:1.28, weight:12 },
+];
+
+function getDailyDifficulty(day) {
+  const r    = mkRng(day * 31337 + 7);
+  const roll = r() * 100;
+  let acc    = 0;
+  for (const d of DIFFICULTY_LEVELS) {
+    acc += d.weight;
+    if (roll < acc) return d;
+  }
+  return DIFFICULTY_LEVELS[1];
+}
+
+// ─── PATTERN LIBRARY ──────────────────────────────────────────────────────────
+// Each pattern(lo, hi, r) returns [{bpm, secs}].
+// Rule: last block bpm >= second-to-last (never end on a dip).
+// BPM ranges are wide — the difficulty multiplier and slot ranges do the scaling.
+
+const PATTERNS = {
+
+  // Calm two-step rise, holds at top
+  plateau(lo, hi, r) {
+    const mid = clamp(lerp(lo, hi, 0.45), lo, hi);
+    const top = clamp(lerp(lo, hi, 0.80), lo, hi);
+    return [
+      {bpm:lo,  secs:vdur(22,4,r)},
+      {bpm:mid, secs:vdur(18,3,r)},
+      {bpm:top, secs:vdur(16,3,r)},
+      {bpm:top, secs:vdur(14,3,r)},
+    ];
+  },
+
+  // Slow → fast → brief dip → fast again. Ends fast.
+  surge(lo, hi, r) {
+    const fast = clamp(lerp(lo, hi, 0.85), lo, hi);
+    const mid  = clamp(lerp(lo, hi, 0.40), lo, hi);
+    return [
+      {bpm:lo,   secs:vdur(20,4,r)},
+      {bpm:fast, secs:vdur(16,3,r)},
+      {bpm:mid,  secs:vdur(12,2,r)},
+      {bpm:fast, secs:vdur(18,3,r)},
+    ];
+  },
+
+  // Pure step-up, no drops ever
+  escalator(lo, hi, r) {
+    const s2 = clamp(lerp(lo, hi, 0.33), lo, hi);
+    const s3 = clamp(lerp(lo, hi, 0.66), lo, hi);
+    return [
+      {bpm:lo, secs:vdur(20,4,r)},
+      {bpm:s2, secs:vdur(17,3,r)},
+      {bpm:s3, secs:vdur(15,3,r)},
+      {bpm:hi, secs:vdur(14,3,r)},
+    ];
+  },
+
+  // Fast → long slow tease → very fast snap. Ends hardest.
+  tease(lo, hi, r) {
+    const fast  = clamp(lerp(lo, hi, 0.68), lo, hi);
+    const vfast = clamp(lerp(lo, hi, 0.96), lo, hi);
+    return [
+      {bpm:fast,  secs:vdur(15,3,r)},
+      {bpm:lo,    secs:vdur(24,4,r)},
+      {bpm:fast,  secs:vdur(13,2,r)},
+      {bpm:vfast, secs:vdur(18,3,r)},
+    ];
+  },
+
+  // Gentle oscillation drifting upward — never drops at the end
+  wave(lo, hi, r) {
+    const m1 = clamp(lerp(lo, hi, 0.25), lo, hi);
+    const m2 = clamp(lerp(lo, hi, 0.55), lo, hi);
+    const m3 = clamp(lerp(lo, hi, 0.40), lo, hi);
+    const m4 = clamp(lerp(lo, hi, 0.75), lo, hi);
+    return [
+      {bpm:lo, secs:vdur(16,3,r)},
+      {bpm:m1, secs:vdur(13,2,r)},
+      {bpm:m2, secs:vdur(14,3,r)},
+      {bpm:m3, secs:vdur(11,2,r)},
+      {bpm:m4, secs:vdur(14,3,r)},
+    ];
+  },
+
+  // Normal → sudden sprint → recovery → harder sprint
+  punch(lo, hi, r) {
+    const mid    = clamp(lerp(lo, hi, 0.38), lo, hi);
+    const sprint = clamp(lerp(lo, hi, 0.82), lo, hi);
+    const harder = clamp(lerp(lo, hi, 0.96), lo, hi);
+    return [
+      {bpm:mid,    secs:vdur(18,3,r)},
+      {bpm:sprint, secs:vdur(11,2,r)},
+      {bpm:mid,    secs:vdur(13,2,r)},
+      {bpm:harder, secs:vdur(18,3,r)},
+    ];
+  },
+
+  // Very long slow sections, one sharp spike at end
+  slowBurn(lo, hi, r) {
+    const spike = clamp(lerp(lo, hi, 0.90), lo, hi);
+    return [
+      {bpm:lo,    secs:vdur(34,5,r)},
+      {bpm:lo,    secs:vdur(26,4,r)},
+      {bpm:spike, secs:vdur(18,3,r)},
+    ];
+  },
+
+  // Rapid short alternations — flutter feel
+  flutter(lo, hi, r) {
+    const fast = clamp(lerp(lo, hi, 0.92), lo, hi);
+    const mid  = clamp(lerp(lo, hi, 0.48), lo, hi);
+    return [
+      {bpm:fast, secs:vdur(10,2,r)},
+      {bpm:mid,  secs:vdur(9, 2,r)},
+      {bpm:fast, secs:vdur(10,2,r)},
+      {bpm:mid,  secs:vdur(8, 1,r)},
+      {bpm:fast, secs:vdur(13,2,r)},
+    ];
+  },
+
+  // Builds to peak, small dip, returns to peak
+  climax(lo, hi, r) {
+    const mid  = clamp(lerp(lo, hi, 0.50), lo, hi);
+    const peak = hi;
+    const dip  = clamp(lerp(lo, hi, 0.65), lo, hi);
+    return [
+      {bpm:lo,   secs:vdur(16,3,r)},
+      {bpm:mid,  secs:vdur(14,3,r)},
+      {bpm:peak, secs:vdur(13,2,r)},
+      {bpm:dip,  secs:vdur(9, 2,r)},
+      {bpm:peak, secs:vdur(16,3,r)},
+    ];
+  },
+
+  // Long sustained mid-plateau then final push
+  grind(lo, hi, r) {
+    const mid  = clamp(lerp(lo, hi, 0.55), lo, hi);
+    const high = clamp(lerp(lo, hi, 0.88), lo, hi);
+    return [
+      {bpm:lo,   secs:vdur(20,3,r)},
+      {bpm:mid,  secs:vdur(28,4,r)},
+      {bpm:high, secs:vdur(16,3,r)},
+      {bpm:high, secs:vdur(12,2,r)},
+    ];
+  },
+
+  // DRAMATIC: long crawl → sudden jump to near-max → holds there
+  shock(lo, hi, r) {
+    const crawl  = clamp(lerp(lo, hi, 0.10), lo, hi);
+    const sprint = clamp(lerp(lo, hi, 0.94), lo, hi);
+    return [
+      {bpm:crawl,  secs:vdur(28,5,r)},
+      {bpm:crawl,  secs:vdur(20,4,r)},
+      {bpm:sprint, secs:vdur(22,4,r)},
+      {bpm:sprint, secs:vdur(14,3,r)},
+    ];
+  },
+
+  // DRAMATIC: starts fast, drops to very slow, slams back hard
+  cliff(lo, hi, r) {
+    const fast   = clamp(lerp(lo, hi, 0.80), lo, hi);
+    const floor  = clamp(lerp(lo, hi, 0.08), lo, hi);
+    const slam   = clamp(lerp(lo, hi, 0.97), lo, hi);
+    return [
+      {bpm:fast,  secs:vdur(14,3,r)},
+      {bpm:floor, secs:vdur(16,3,r)},
+      {bpm:fast,  secs:vdur(12,2,r)},
+      {bpm:slam,  secs:vdur(18,3,r)},
+    ];
+  },
+
+  // DRAMATIC: alternates between two extremes repeatedly — disorienting
+  strobe(lo, hi, r) {
+    const low  = clamp(lerp(lo, hi, 0.12), lo, hi);
+    const high = clamp(lerp(lo, hi, 0.90), lo, hi);
+    return [
+      {bpm:high, secs:vdur(9, 2,r)},
+      {bpm:low,  secs:vdur(9, 2,r)},
+      {bpm:high, secs:vdur(10,2,r)},
+      {bpm:low,  secs:vdur(8, 1,r)},
+      {bpm:high, secs:vdur(14,2,r)},
+    ];
+  },
+};
+
+const PATTERN_NAMES = Object.keys(PATTERNS);
+
+// ─── THEMES ───────────────────────────────────────────────────────────────────
+// Each theme has a distinct character that genuinely differentiates the day.
+// Themes affect: which patterns appear, BPM bias within slot ranges, and duration bias.
+
+const THEMES = {
+  // Slow Burn: lulls players into comfort, hits late and hard.
+  // BPM bias LOW, duration bias LONG, shock pattern common in later stages.
+  slowBurn: {
+    bpmBias:  -0.15,  // push BPMs toward the lo end of each slot range
+    durBias:  +0.15,  // stages run longer
+    pools: {
+      early:  ['slowBurn','plateau','wave'],
+      mid:    ['slowBurn','grind','plateau','wave','shock'],
+      late:   ['shock','grind','climax','surge'],
+    },
+  },
+
+  // Surge: dramatic swings between fast and slow. Unpredictable.
+  // BPM bias neutral, wide swings, tease/surge/cliff/strobe dominate.
+  surge: {
+    bpmBias:  0.0,
+    durBias:  0.0,
+    pools: {
+      early:  ['plateau','wave','surge'],
+      mid:    ['surge','tease','cliff','strobe','punch'],
+      late:   ['surge','cliff','strobe','flutter','punch'],
+    },
+  },
+
+  // Relentless: BPM pushed HIGH across the board. No recovery. People tap out early.
+  // BPM bias HIGH, escalator and grind everywhere.
+  relentless: {
+    bpmBias:  +0.18,  // push BPMs toward the hi end of each slot range
+    durBias:  -0.05,
+    pools: {
+      early:  ['escalator','plateau','surge'],
+      mid:    ['escalator','punch','grind','surge','climax'],
+      late:   ['escalator','punch','climax','flutter','grind'],
+    },
+  },
+
+  // Erratic: genuinely random. Anything could appear anywhere in the middle.
+  // Widest BPM swings, strobe/cliff/shock common.
+  erratic: {
+    bpmBias:  0.0,
+    durBias:  -0.08,
+    pools: {
+      early:  ['plateau','surge','wave'],
+      mid:    PATTERN_NAMES,  // completely open
+      late:   ['strobe','cliff','shock','flutter','punch','climax'],
+    },
+  },
+
+  // Wave: gentle oscillation but peaks creep higher each stage.
+  // Feels manageable until suddenly it isn't.
+  wave: {
+    bpmBias:  -0.05,
+    durBias:  +0.05,
+    pools: {
+      early:  ['wave','plateau','slowBurn'],
+      mid:    ['wave','climax','surge','plateau','grind'],
+      late:   ['climax','surge','cliff','grind','shock'],
+    },
+  },
+};
+
+const THEME_NAMES = Object.keys(THEMES);
+
+// ─── STAGE SLOT DEFINITIONS ───────────────────────────────────────────────────
+// Wide lo/hi BPM ranges — daily difficulty multiplier and theme bpmBias scale within.
+// dur: [min, max] total stage seconds (60–120).
+// anchor: 'gentle' = stages 1-2 always gentle regardless of theme/difficulty
+//         'brutal' = stages 9-10 always intense regardless
+//         null     = theme + difficulty driven
+
+const STAGE_SLOTS = [
+  { lo:[22,34], hi:[36,52],   dur:[60,85],  intensity:1,  anchor:'gentle' },
+  { lo:[32,44], hi:[48,66],   dur:[60,88],  intensity:2,  anchor:'gentle' },
+  { lo:[40,66], hi:[62,96],   dur:[65,100], intensity:3,  anchor:null },
+  { lo:[50,80], hi:[74,108],  dur:[65,102], intensity:5,  anchor:null },
+  { lo:[58,92], hi:[84,122],  dur:[68,105], intensity:6,  anchor:null },
+  { lo:[66,102],hi:[96,132],  dur:[70,108], intensity:7,  anchor:null },
+  { lo:[74,108],hi:[106,138], dur:[72,110], intensity:7,  anchor:null },
+  { lo:[84,114],hi:[116,148], dur:[74,112], intensity:8,  anchor:null },
+  { lo:[98,118],hi:[126,152], dur:[76,115], intensity:9,  anchor:'brutal' },
+  { lo:[112,128],hi:[138,160],dur:[78,120], intensity:10, anchor:'brutal' },
+];
+
+const STAGE_TITLES = [
+  ["Gentle","Slow","Opening","Ease In"],
+  ["Rising","Steady","Building","Momentum"],
+  ["Warming","Ascending","Deepening","Gathering"],
+  ["Pressure","Intensity","Heightened","Driven"],
+  ["Ramping It Up"],
+  ["Focused","Tight","Precise","Controlled"],
+  ["Tension","Peak","Sustained","Held"],
+  ["Rapid","Driven","Relentless","Surging"],
+  ["Threshold","Almost","Climbing","Endurance"],
+  ["Final","Summit","The Edge","Apex"],
+];
+
+const TOTAL       = STAGE_SLOTS.length;
+const TL_DURATION = 10000; // 10 seconds
+const KEY         = 'dailyEdge_v13';
+
+// ─── BUILD DAILY STAGES ───────────────────────────────────────────────────────
+function buildDailyStages() {
+  const day       = dayNum();
+  const diff      = getDailyDifficulty(day);
+  const rTheme    = mkRng(day * 999983);
+  const themeName = THEME_NAMES[Math.floor(rTheme() * THEME_NAMES.length)];
+  const theme     = THEMES[themeName];
+  const r         = mkRng(day * 48271 + 31);
+
+  return STAGE_SLOTS.map((slot, i) => {
+    // Title
+    const titles = STAGE_TITLES[i];
+    const title  = titles[Math.floor(r() * titles.length)];
+
+    // Determine BPM range for this stage.
+    // Apply difficulty multiplier and theme bpmBias to scale within the slot range.
+    let bpmMult = diff.mult;
+    if (slot.anchor === 'gentle') {
+      // Anchor stages: gentle always stays gentle regardless of difficulty.
+      // Use 0.85 mult max so hard days don't make stage 1 brutal.
+      bpmMult = Math.min(bpmMult, 0.88);
+    } else if (slot.anchor === 'brutal') {
+      // Anchor stages: brutal always stays brutal regardless of difficulty.
+      // Use 1.05 mult min so easy days still end hard.
+      bpmMult = Math.max(bpmMult, 1.05);
+    }
+
+    // BPM bias from theme shifts where within the range we sample
+    const biasFactor = 0.5 + theme.bpmBias; // 0=always lo, 1=always hi, 0.5=neutral
+    const biasClamped = Math.max(0.05, Math.min(0.95, biasFactor));
+
+    const rawLo = slot.lo[0] + r() * (slot.lo[1] - slot.lo[0]);
+    const rawHi = slot.hi[0] + r() * (slot.hi[1] - slot.hi[0]);
+
+    // Apply theme bias: high bias pulls both lo and hi toward the hi end of their ranges
+    const lo = clamp(rawLo * bpmMult, slot.lo[0] * 0.7, 160);
+    const hi = clamp(Math.max(rawHi * bpmMult, lo + 14), lo + 10, 160);
+
+    // Pick pattern based on stage position and theme
+    let pool;
+    if (slot.anchor === 'gentle') {
+      pool = theme.pools.early;
+    } else if (slot.anchor === 'brutal') {
+      pool = theme.pools.late;
+    } else {
+      // Middle stages: early middle (3-5) vs late middle (6-8)
+      pool = i <= 4 ? theme.pools.mid : theme.pools.late;
+      // 15% wildcard chance — any pattern
+      if (r() < 0.15) pool = PATTERN_NAMES;
+    }
+    const patternName = pool[Math.floor(r() * pool.length)];
+    const blocks      = PATTERNS[patternName](lo, hi, r);
+
+    // Enforce no-dip on final two blocks
+    if (blocks.length >= 2) {
+      const last   = blocks[blocks.length - 1];
+      const penult = blocks[blocks.length - 2];
+      if (last.bpm < penult.bpm) last.bpm = penult.bpm;
+    }
+
+    // Apply duration bias from theme, then clamp to slot range
+    const durBiasMultiplier = 1 + theme.durBias;
+    const rawTotal  = blocks.reduce((acc, b) => acc + b.secs, 0) * durBiasMultiplier;
+    const totalSecs = clamp(rawTotal, slot.dur[0], slot.dur[1]);
+
+    if (Math.abs(rawTotal - totalSecs) > 1 && rawTotal > 0) {
+      const scale = totalSecs / rawTotal;
+      blocks.forEach(b => { b.secs = Math.max(7, Math.round(b.secs * scale)); });
+    }
+
+    return { title, blocks, totalSecs, intensity: slot.intensity, pattern: patternName };
+  });
+}
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+const G = {
+  stages:[], idx:0, ratings:[],
+  timerIv:null, timerLeft:0,
+  metroToken:0, currentBpm:60,
+  nextBeatTime:0, schedulerActive:false,
+  schedulerTimerId:null, blockTimerId:null,
+  muted:false, audioCtx:null,
+  tlTimeout:null, tlResolve:null, tlEdgedPending:false,
+  speedIndTimeout:null,
+  dayTheme:'', dayDifficulty:'',
+};
+
+// ─── AUDIO ────────────────────────────────────────────────────────────────────
+function getAC() {
+  if (!G.audioCtx) G.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return G.audioCtx;
+}
+function toggleMute() {
+  G.muted = !G.muted;
+  const b = document.getElementById('metroMuteBtn');
+  b.textContent = G.muted ? 'tap to unmute' : 'tap to mute';
+  b.classList.toggle('muted', G.muted);
+  if (!G.muted && G.audioCtx && G.audioCtx.state === 'suspended') G.audioCtx.resume();
+}
+
+// ─── RADAR VISUAL ─────────────────────────────────────────────────────────────
+function triggerPulse(bpm) {
+  const ring = document.getElementById('radarRing');
+  const core = document.getElementById('radarCore');
+  if (!ring || !core) return;
+  const durMs = Math.round(60000 / bpm);
+  ring.style.setProperty('--beat-dur', durMs + 'ms');
+  ring.classList.remove('fire'); void ring.offsetWidth; ring.classList.add('fire');
+  core.classList.remove('pop');  void core.offsetWidth;  core.classList.add('pop');
+}
+
+// ─── WEB AUDIO METRONOME ──────────────────────────────────────────────────────
+// Beats scheduled via audioContext.currentTime — sample-accurate, no drift.
+// Block transitions on their own independent setTimeout — cleanly cancellable.
+
+const LOOKAHEAD  = 0.10; // seconds to look ahead
+const SCHED_INT  = 25;   // scheduler loop interval (ms)
+
+function startMetro(stage) {
+  G.metroToken++;
+  G.schedulerActive = true;
+  G.currentBpm      = stage.blocks[0].bpm;
+  G.nextBeatTime    = getAC().currentTime + 0.05;
+  document.getElementById('metroBpm').textContent = G.currentBpm;
+  runScheduler(G.metroToken);
+  scheduleBlock(stage, 0, G.metroToken, true);
+}
+
+function runScheduler(token) {
+  if (token !== G.metroToken || !G.schedulerActive) return;
+  const ac       = getAC();
+  const interval = 60 / G.currentBpm;
+  while (G.nextBeatTime < ac.currentTime + LOOKAHEAD) {
+    scheduleAudioClick(G.nextBeatTime);
+    scheduleVisualPulse(G.nextBeatTime, G.currentBpm, token);
+    G.nextBeatTime += interval;
+  }
+  G.schedulerTimerId = setTimeout(() => runScheduler(token), SCHED_INT);
+}
+
+function scheduleAudioClick(atTime) {
+  if (G.muted) return;
+  try {
+    const ac = getAC(), o = ac.createOscillator(), g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type = 'sine'; o.frequency.value = 700;
+    g.gain.setValueAtTime(0.22, atTime);
+    g.gain.exponentialRampToValueAtTime(0.001, atTime + 0.06);
+    o.start(atTime); o.stop(atTime + 0.07);
+  } catch(e) {}
+}
+
+function scheduleVisualPulse(atAudioTime, bpm, token) {
+  const delayMs = (atAudioTime - getAC().currentTime) * 1000;
+  setTimeout(() => {
+    if (token !== G.metroToken) return;
+    triggerPulse(bpm);
+  }, Math.max(0, delayMs));
+}
+
+function scheduleBlock(stage, blockIdx, token, isFirst) {
+  if (token !== G.metroToken) return;
+  const block   = stage.blocks[blockIdx % stage.blocks.length];
+  const prevBpm = G.currentBpm;
+  G.currentBpm  = block.bpm;
+  document.getElementById('metroBpm').textContent = block.bpm;
+  if (!isFirst) showSpeedIndicator(block.bpm > prevBpm ? 'faster' : block.bpm < prevBpm ? 'slower' : null);
+  // Beat scheduler picks up new BPM automatically on next loop iteration.
+  G.blockTimerId = setTimeout(() => {
+    scheduleBlock(stage, blockIdx + 1, token, false);
+  }, block.secs * 1000);
+}
+
+function stopMetro() {
+  G.metroToken++;
+  G.schedulerActive = false;
+  if (G.schedulerTimerId) { clearTimeout(G.schedulerTimerId); G.schedulerTimerId = null; }
+  if (G.blockTimerId)     { clearTimeout(G.blockTimerId);     G.blockTimerId     = null; }
+}
+
+function showSpeedIndicator(dir) {
+  if (!dir) return;
+  const el = document.getElementById('speedIndicator');
+  if (!el) return;
+  el.textContent = dir === 'faster' ? '▲ Faster' : '▼ Slower';
+  el.className   = 'speed-indicator show ' + dir;
+  if (G.speedIndTimeout) clearTimeout(G.speedIndTimeout);
+  G.speedIndTimeout = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ─── SCREENS ──────────────────────────────────────────────────────────────────
+function showScr(name) {
+  ['Welcome','Stage','FinalEdge','Result','Already'].forEach(n =>
+    document.getElementById('scr'+n).classList.add('hidden')
+  );
+  const el = document.getElementById('scr'+name);
+  el.classList.remove('hidden'); el.classList.add('fade-in');
+}
+
+// ─── TRACK ────────────────────────────────────────────────────────────────────
+function buildTrack() {
+  const t = document.getElementById('stageTrack'); t.innerHTML = '';
+  for (let i = 0; i < TOTAL; i++) {
+    const p = document.createElement('div');
+    p.className = 'stage-pip'; p.id = 'pip'+i; t.appendChild(p);
+  }
+}
+function updatePip(i, state) {
+  const p = document.getElementById('pip'+i); if (!p) return;
+  p.className = 'stage-pip';
+  if      (state==='active')  p.classList.add('active');
+  else if (state==='stopped') p.classList.add('stopped');
+  else if (state==='came')    p.classList.add('came');
+  else if (['green','amber','red'].includes(state)) p.classList.add('complete-'+state);
+  else p.classList.add('complete-none');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+function init() {
+  document.getElementById('dayBadge').textContent = 'Day '+dayNum();
+  buildTrack();
+  const saved = loadSaved();
+  if (saved && saved.day===dayNum() && saved.outcome && saved.outcome!=='reset') {
+    showAlready(saved);
+  } else {
+    showScr('Welcome');
+  }
+}
+
+// ─── GAME FLOW ────────────────────────────────────────────────────────────────
+function startGame() {
+  try { getAC().resume(); } catch(e) {}
+  G.stages  = buildDailyStages();
+  G.ratings = Array(TOTAL).fill(null);
+  // Store day info for end screen display
+  const day        = dayNum();
+  const diff       = getDailyDifficulty(day);
+  const rTheme     = mkRng(day * 999983);
+  const themeName  = THEME_NAMES[Math.floor(rTheme() * THEME_NAMES.length)];
+  G.dayDifficulty  = diff.name.charAt(0).toUpperCase() + diff.name.slice(1);
+  G.dayTheme       = themeName.replace(/([A-Z])/g,' $1').trim()
+                       .replace(/^./,c=>c.toUpperCase()); // camelCase → Title Case
+  runStage(0);
+}
+
+function runStage(i) {
+  G.idx = i;
+  const s = G.stages[i];
+  document.getElementById('stageNum').textContent   = 'Stage '+(i+1)+' of '+TOTAL;
+  document.getElementById('stageTitle').textContent = s.title;
+  const pct = s.intensity/10*100;
+  const f   = document.getElementById('intFill');
+  f.style.width      = pct+'%';
+  f.style.background = `hsl(${10+s.intensity*2},${60+s.intensity*4}%,55%)`;
+  document.getElementById('intVal').textContent = s.intensity+'/10';
+  const si = document.getElementById('speedIndicator');
+  si.className='speed-indicator'; si.textContent='';
+  updatePip(i,'active');
+  showScr('Stage');
+  startMetro(s);
+  startTimer(s.totalSecs, () => stageComplete(i));
+}
+
+function stageComplete(i) {
+  stopMetro(); clearTimer();
+  showTL(i, i+1>=TOTAL).then(rating => {
+    G.ratings[i] = rating;
+    updatePip(i, rating||'none');
+
+    // Player clicked "I edged" during the traffic light — end game now
+    if (G.tlEdgedPending) {
+      G.tlEdgedPending = false;
+      endGame(i+1, 'edged');
+      return;
+    }
+
+    if (i+1>=TOTAL) {
+      const day = dayNum();
+      save({ day, stagesReached:TOTAL, outcome:'completed', ratings:G.ratings });
+      document.getElementById('shareFinal').innerHTML =
+        buildShareHTML(day, TOTAL, 'completed', G.ratings);
+      renderDayInfo('dayInfoFinal');
+      showScr('FinalEdge');
+    } else {
+      runStage(i+1);
+    }
+  });
+}
+
+function _stopAll() {
+  stopMetro(); clearTimer();
+  if (G.tlTimeout) { clearTimeout(G.tlTimeout); G.tlTimeout=null; }
+  document.getElementById('tlOverlay').classList.add('hidden');
+}
+function playerEdged() { _stopAll(); endGame(G.idx+1,'edged'); }
+function playerCame()  { _stopAll(); endGame(G.idx+1,'came'); }
+function playerReset() {
+  _stopAll();
+  save({ day:dayNum(), outcome:'reset' });
+  G.ratings=Array(TOTAL).fill(null); G.idx=0;
+  buildTrack(); showScr('Welcome');
+}
+
+// ─── TIMER ────────────────────────────────────────────────────────────────────
+function startTimer(secs, cb) {
+  clearTimer();
+  G.timerLeft = secs;
+  G.timerIv   = setInterval(() => { if (--G.timerLeft<=0) { clearTimer(); cb(); } }, 1000);
+}
+function clearTimer() { if (G.timerIv) { clearInterval(G.timerIv); G.timerIv=null; } }
+
+// ─── TRAFFIC LIGHT ────────────────────────────────────────────────────────────
+const TL_PROMPTS = [
+  "How are you holding up?","How's the intensity?","Still with us?",
+  "How are you feeling?","Rate that stage —","Doing okay?","How was that?",
+];
+const TL_LAST = [
+  "You made it through all ten. How do you feel?",
+  "All ten stages. Rate it.",
+  "Final stage done. How was that?",
+];
+
+function showTL(idx, isLast) {
+  return new Promise(resolve => {
+    G.tlResolve = resolve;
+    const pool  = isLast ? TL_LAST : TL_PROMPTS;
+    document.getElementById('tlPrompt').textContent = pool[idx%pool.length];
+    document.getElementById('tlOverlay').classList.remove('hidden');
+    const bar = document.getElementById('tlBar');
+    bar.style.transition='none'; bar.style.width='100%';
+    void bar.offsetWidth;
+    bar.style.transition=`width ${TL_DURATION}ms linear`; bar.style.width='0%';
+    G.tlTimeout = setTimeout(()=>tlPick(null), TL_DURATION);
+  });
+}
+function tlPick(rating) {
+  if (G.tlTimeout) { clearTimeout(G.tlTimeout); G.tlTimeout=null; }
+  document.getElementById('tlOverlay').classList.add('hidden');
+  if (G.tlEdgedPending) {
+    // Player hit "I edged" during TL — end the game with their rating recorded
+    G.tlEdgedPending = false;
+    if (G.tlResolve) { G.tlResolve(rating); G.tlResolve=null; }
+    // endGame will be called after the promise resolves in stageComplete
+    return;
+  }
+  if (G.tlResolve) { G.tlResolve(rating); G.tlResolve=null; }
+}
+
+// Called when player clicks "I edged" during the between-stage traffic light.
+// Records their rating for the completed stage, then ends the game as edged.
+function tlEdged() {
+  if (G.tlTimeout) { clearTimeout(G.tlTimeout); G.tlTimeout=null; }
+  document.getElementById('tlOverlay').classList.add('hidden');
+  // Resolve the TL promise with whatever the bar was at (null = no rating selected)
+  // Then immediately end the game — we do this by resolving then triggering endGame
+  // after the stageComplete promise chain has a chance to record the rating.
+  // We set a flag so stageComplete knows to end the game instead of starting next stage.
+  G.tlEdgedPending = true;
+  if (G.tlResolve) {
+    const resolve = G.tlResolve;
+    G.tlResolve = null;
+    resolve(null); // resolve with no rating — they didn't have time to rate
+  }
+}
+
+// ─── DAY INFO ─────────────────────────────────────────────────────────────────
+// Shown on result screens only — not included in the share text.
+const THEME_DISPLAY = {
+  slowBurn:   'Slow Burn',
+  surge:      'Surge',
+  relentless: 'Relentless',
+  erratic:    'Erratic',
+  wave:       'Wave',
+};
+
+function renderDayInfo(elId) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!G.dayTheme && !G.dayDifficulty) { el.innerHTML=''; return; }
+  // Reconstruct theme display name cleanly
+  const day      = dayNum();
+  const rTheme   = mkRng(day * 999983);
+  const tName    = THEME_NAMES[Math.floor(rTheme() * THEME_NAMES.length)];
+  const diff     = getDailyDifficulty(day);
+  const themeStr = THEME_DISPLAY[tName] || tName;
+  const diffStr  = diff.name.charAt(0).toUpperCase() + diff.name.slice(1);
+  el.innerHTML   = `Today's theme: <span>${themeStr}</span> &nbsp;·&nbsp; Difficulty: <span>${diffStr}</span>`;
+}
+
+// ─── END GAME ─────────────────────────────────────────────────────────────────
+const MSGS = {
+  completed:[
+    "Ten stages. Every beat, all the way through. That's the whole game.",
+    "The full run. Every stage, every tick. Well done — we mean that.",
+    "All ten. You held the pace to the very end.",
+    "You made it. The metronome had the last word and you kept up with it.",
+  ],
+  edged:[
+    "Stage {s}. Right at the limit and you stopped. That's the whole point.",
+    "Stage {s}. You made it that far and held the edge. Respectable.",
+    "Stage {s}. That's your score. Come back tomorrow and try to beat it.",
+    "You edged at stage {s}. That's your number.",
+  ],
+  came:[
+    "Stage {s}. The edge got the better of you today. It happens.",
+    "Stage {s}. You went over. Try again tomorrow.",
+    "Over at stage {s}. At least you're honest about it.",
+    "Stage {s}. Game over — you know why.",
+  ],
+};
+
+function endGame(stagesReached, outcome) {
+  const day = dayNum();
+  save({ day, stagesReached, outcome, ratings:G.ratings });
+  document.getElementById('resBig').innerHTML = stagesReached+'<span>/'+TOTAL+'</span>';
+  const badge = document.getElementById('resBadge');
+  const cfg = {
+    completed:{ text:'Completed ✦',                        cls:'badge-completed' },
+    edged:    { text:'Edged at stage '+stagesReached,      cls:'badge-edged' },
+    came:     { text:'Went over at stage '+stagesReached,  cls:'badge-came' },
+  }[outcome] || { text:'Stopped', cls:'badge-edged' };
+  badge.textContent=cfg.text; badge.className='result-badge '+cfg.cls;
+  const pool = MSGS[outcome]||MSGS.edged;
+  document.getElementById('resMsg').textContent =
+    pool[day%pool.length].replace(/\{s\}/g,stagesReached);
+  renderColourRow('colourRow',G.ratings,stagesReached,outcome);
+  document.getElementById('shareBox').innerHTML =
+    buildShareHTML(day,stagesReached,outcome,G.ratings);
+  renderDayInfo('dayInfo');
+  if (outcome==='came')        updatePip(stagesReached-1,'came');
+  else if (outcome!=='completed') updatePip(stagesReached-1,'stopped');
+  showScr('Result');
+}
+
+// ─── COLOUR ROW ───────────────────────────────────────────────────────────────
+function renderColourRow(id, ratings, reached, outcome) {
+  const row = document.getElementById(id); row.innerHTML='';
+  for (let i=0;i<TOTAL;i++) {
+    const el     = document.createElement('div');
+    const played = (i<reached-1)||(i===reached-1&&outcome==='completed');
+    const isStop = i===reached-1&&outcome!=='completed';
+    if (played) {
+      const r = ratings[i];
+      el.className   = 'colour-pip '+({green:'cp-green',amber:'cp-amber',red:'cp-red'}[r]||'cp-none');
+      el.textContent = '●';
+    } else if (isStop) {
+      el.className   = 'colour-pip '+(outcome==='came'?'cp-blue':'cp-stop');
+      el.textContent = outcome==='came'?'●':'✕';
+    } else {
+      el.className='colour-pip cp-empty'; el.textContent='·';
+    }
+    row.appendChild(el);
+  }
+}
+
+// ─── SHARE ────────────────────────────────────────────────────────────────────
+const TLE     = { green:'🟢', amber:'🟡', red:'🔴', null:'⬜' };
+const DIVIDER = '____________________';
+const UNPLAYED= '◻️';
+const OUTCOME_LABEL = {
+  completed:'Successfully edged ✦',
+  edged:    'Successfully edged ✦',
+  came:     'Went over the edge',
+};
+
+function buildEmojiRow(reached, outcome, ratings) {
+  return Array.from({length:TOTAL},(_,i)=>{
+    if (i<reached-1)                              return TLE[ratings[i]]||'⬜';
+    if (i===reached-1&&outcome==='completed')     return '🔥';
+    if (i===reached-1&&outcome==='came')          return '💦';
+    if (i===reached-1)                            return '✅';
+    return UNPLAYED;
+  }).join('');
+}
+
+function buildShareText(day, reached, outcome, ratings) {
+  const oe  = {completed:'🔥',edged:'✅',came:'💦'}[outcome]||'✅';
+  const row = buildEmojiRow(reached,outcome,ratings);
+  return [
+    DIVIDER,
+    'The Daily Edge — Day '+day,
+    'Stage '+reached+'/'+TOTAL+' '+oe,
+    OUTCOME_LABEL[outcome]||OUTCOME_LABEL.edged,
+    row,
+    'curiouspirategames.github.io',
+    DIVIDER,
+  ].join('\n');
+}
+
+function buildShareHTML(day, reached, outcome, ratings) {
+  const oe  = {completed:'🔥',edged:'✅',came:'💦'}[outcome]||'✅';
+  const row = buildEmojiRow(reached,outcome,ratings);
+  return [
+    `<span class="share-divider">${DIVIDER}</span>`,
+    `<span>The Daily Edge — Day ${day}</span>`,
+    `<span>Stage ${reached}/${TOTAL} ${oe}</span>`,
+    `<span>${OUTCOME_LABEL[outcome]||OUTCOME_LABEL.edged}</span>`,
+    `<span class="share-emoji-row">${row}</span>`,
+    `<span>curiouspirategames.github.io</span>`,
+    `<span class="share-divider">${DIVIDER}</span>`,
+  ].join('\n');
+}
+
+function doShare()       { const s=loadSaved(); if(s) clip(buildShareText(s.day,s.stagesReached,s.outcome,s.ratings),'copyConfirm'); }
+function doShareFinal()  { const s=loadSaved(); if(s) clip(buildShareText(s.day,s.stagesReached,s.outcome,s.ratings),'copyConfirmFinal'); }
+function doShareReplay() { const s=loadSaved(); if(s) clip(buildShareText(s.day,s.stagesReached,s.outcome,s.ratings),'copyConfirmReplay'); }
+
+function clip(text,fbId) {
+  const done=()=>{ const el=document.getElementById(fbId); el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2500); };
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(done).catch(()=>fbCopy(text,done));
+  else fbCopy(text,done);
+}
+function fbCopy(text,cb) {
+  const t=document.createElement('textarea');
+  t.value=text; document.body.appendChild(t); t.select();
+  document.execCommand('copy'); document.body.removeChild(t); cb();
+}
+
+// ─── ALREADY PLAYED ───────────────────────────────────────────────────────────
+function showAlready(saved) {
+  for (let i=0;i<TOTAL;i++) {
+    const played = i<saved.stagesReached-1||(i===saved.stagesReached-1&&saved.outcome==='completed');
+    const isStop = i===saved.stagesReached-1&&saved.outcome!=='completed';
+    if (played)      updatePip(i,saved.ratings[i]||'none');
+    else if (isStop) updatePip(i,saved.outcome==='came'?'came':'stopped');
+  }
+  document.getElementById('shareBoxReplay').innerHTML =
+    buildShareHTML(saved.day,saved.stagesReached,saved.outcome,saved.ratings);
+  showScr('Already');
+  const tick=()=>{
+    const ms=msUntilReset();
+    const h=Math.floor(ms/3600000), m=Math.floor((ms%3600000)/60000), s=Math.floor((ms%60000)/1000);
+    document.getElementById('resetTimer').textContent =
+      h+'h '+String(m).padStart(2,'0')+'m '+String(s).padStart(2,'0')+'s';
+  };
+  tick(); setInterval(tick,1000);
+}
+
+// ─── STORAGE ──────────────────────────────────────────────────────────────────
+function save(d)     { localStorage.setItem(KEY,JSON.stringify(d)); }
+function loadSaved() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
+
+init();
+</script>
+</body>
+</html>

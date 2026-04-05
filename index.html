@@ -53,7 +53,7 @@
   .rules-list li.rule-key{color:var(--text);}
   .rules-list li.rule-key::before{content:'✦';color:var(--accent2);}
 
-  .stage-number{font-size:.52rem;letter-spacing:.3em;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;}
+  .stage-number{font-size:.7rem;letter-spacing:.3em;color:var(--text-dim);text-transform:uppercase;margin-bottom:20px;text-align:center;}
   .stage-title{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:300;color:var(--accent2);font-style:italic;margin-bottom:20px;text-align:center;}
 
   .intensity-wrap{margin-bottom:24px;}
@@ -207,13 +207,13 @@
       </ul>
     </div>
     <button class="btn btn-primary" onclick="startGame()">Begin Today's Challenge</button>
-    <p class="small-note">Each stage lasts between 1 and 2 minutes.<br>Gets difficult by stage five. Good luck.</p>
+    <p class="small-note">Each stage lasts between 1 and 2 minutes.</p>
+    <p class="small-note" style="margin-top:10px;">Game resets in <span id="welcomeTimer" style="color:var(--accent2);">—</span></p>
   </div>
 
   <div id="scrStage" class="hidden">
     <div class="card live">
       <div class="stage-number" id="stageNum"></div>
-      <div class="stage-title"  id="stageTitle"></div>
       <div class="intensity-wrap">
         <div class="intensity-label"><span>Intensity</span><span id="intVal"></span></div>
         <div class="intensity-track"><div class="intensity-fill" id="intFill"></div></div>
@@ -269,15 +269,15 @@
     <button class="btn btn-gold" onclick="doShare()">Copy Result to Share</button>
     <div class="copy-confirm" id="copyConfirm">Copied ✓</div>
     <div class="divider"></div>
-    <div class="small-note">New challenge available daily. Come back tomorrow.</div>
+    <div class="small-note">Next challenge in <span id="resultTimer" style="color:var(--accent2);">—</span></div>
   </div>
 
   <div id="scrAlready" class="hidden fade-in">
     <div class="card already-wrap">
       <span class="already-emoji">🔥</span>
       <div class="already-title">Already played today.</div>
-      <p class="small-note" style="margin-bottom:14px;">Your score is saved. A new challenge is coming.</p>
-      <div class="reset-countdown">Next challenge in <span id="resetTimer">—</span></div>
+      <p class="small-note" style="margin-bottom:14px;">Your score is saved. Share it with your group.</p>
+      <div class="reset-countdown">Next challenge in <span id="resetTimer" style="color:var(--accent2);">—</span></div>
     </div>
     <div class="divider"></div>
     <div class="share-box" id="shareBoxReplay"></div>
@@ -309,9 +309,9 @@
 
 // ─── LAUNCH CONFIG ────────────────────────────────────────────────────────────
 // Set EPOCH to your launch date. Day 1 = first reset period on or after this date.
-// Format: Date.UTC(year, month-1, day, 14)  ← 14 = 14:00 UTC reset hour
-const RESET_HOUR = 14;
-const EPOCH      = new Date(Date.UTC(2025, 0, 1, RESET_HOUR)); // ← change on launch
+// Day 0 = the day before launch (today, 5 April 2026) — still playable for testing.
+const RESET_HOUR = 6;                                            // UTC 06:00 daily reset
+const EPOCH      = new Date(Date.UTC(2026, 3, 5, RESET_HOUR));  // Day 0 = 5 Apr, Day 1 = 6 Apr 2026
 
 // ─── DAY / RESET ──────────────────────────────────────────────────────────────
 function periodStart() {
@@ -320,7 +320,7 @@ function periodStart() {
   if (now < reset) reset.setUTCDate(reset.getUTCDate() - 1);
   return reset;
 }
-function dayNum()       { return Math.floor((periodStart() - EPOCH) / 86400000) + 1; }
+function dayNum()       { return Math.floor((periodStart() - EPOCH) / 86400000); }
 function msUntilReset() { const n = new Date(periodStart()); n.setUTCDate(n.getUTCDate()+1); return n - Date.now(); }
 
 // ─── RNG ──────────────────────────────────────────────────────────────────────
@@ -861,6 +861,7 @@ function init() {
     showAlready(saved);
   } else {
     showScr('Welcome');
+    startCountdown();
   }
 }
 
@@ -884,7 +885,6 @@ function runStage(i) {
   G.idx = i;
   const s = G.stages[i];
   document.getElementById('stageNum').textContent   = 'Stage '+(i+1)+' of '+TOTAL;
-  document.getElementById('stageTitle').textContent = s.title;
   const pct = s.intensity/10*100;
   const f   = document.getElementById('intFill');
   f.style.width      = pct+'%';
@@ -1067,6 +1067,7 @@ function endGame(stagesReached, outcome) {
   if (outcome==='came')        updatePip(stagesReached-1,'came');
   else if (outcome!=='completed') updatePip(stagesReached-1,'stopped');
   showScr('Result');
+  startCountdown();
 }
 
 // ─── COLOUR ROW ───────────────────────────────────────────────────────────────
@@ -1094,6 +1095,7 @@ function renderColourRow(id, ratings, reached, outcome) {
 const TLE     = { green:'🟢', amber:'🟡', red:'🔴', null:'⬜' };
 const DIVIDER = '____________________';
 const UNPLAYED= '◻️';
+const SHARE_URL = 'curiouspirategames.github.io/thedailyedge';
 const OUTCOME_LABEL = {
   completed:'Successfully edged ✦',
   edged:    'Successfully edged ✦',
@@ -1119,7 +1121,7 @@ function buildShareText(day, reached, outcome, ratings) {
     'Stage '+reached+'/'+TOTAL+' '+oe,
     OUTCOME_LABEL[outcome]||OUTCOME_LABEL.edged,
     row,
-    'curiouspirategames.github.io',
+    SHARE_URL,
     DIVIDER,
   ].join('\n');
 }
@@ -1133,7 +1135,7 @@ function buildShareHTML(day, reached, outcome, ratings) {
     `<span>Stage ${reached}/${TOTAL} ${oe}</span>`,
     `<span>${OUTCOME_LABEL[outcome]||OUTCOME_LABEL.edged}</span>`,
     `<span class="share-emoji-row">${row}</span>`,
-    `<span>curiouspirategames.github.io</span>`,
+    `<span>curiouspirategames.github.io/thedailyedge</span>`,
     `<span class="share-divider">${DIVIDER}</span>`,
   ].join('\n');
 }
@@ -1153,6 +1155,27 @@ function fbCopy(text,cb) {
   document.execCommand('copy'); document.body.removeChild(t); cb();
 }
 
+// ─── SHARED COUNTDOWN ────────────────────────────────────────────────────────
+// Updates all countdown timers on screen simultaneously.
+// Called once on init and once when showing result/already screens.
+let countdownIv = null;
+function startCountdown() {
+  if (countdownIv) clearInterval(countdownIv);
+  const update = () => {
+    const ms = msUntilReset();
+    const h  = Math.floor(ms / 3600000);
+    const m  = Math.floor((ms % 3600000) / 60000);
+    const s  = Math.floor((ms % 60000) / 1000);
+    const str = h + 'h ' + String(m).padStart(2,'0') + 'm ' + String(s).padStart(2,'0') + 's';
+    ['welcomeTimer','resetTimer','resultTimer'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = str;
+    });
+  };
+  update();
+  countdownIv = setInterval(update, 1000);
+}
+
 // ─── ALREADY PLAYED ───────────────────────────────────────────────────────────
 function showAlready(saved) {
   for (let i=0;i<TOTAL;i++) {
@@ -1164,13 +1187,7 @@ function showAlready(saved) {
   document.getElementById('shareBoxReplay').innerHTML =
     buildShareHTML(saved.day,saved.stagesReached,saved.outcome,saved.ratings);
   showScr('Already');
-  const tick=()=>{
-    const ms=msUntilReset();
-    const h=Math.floor(ms/3600000), m=Math.floor((ms%3600000)/60000), s=Math.floor((ms%60000)/1000);
-    document.getElementById('resetTimer').textContent =
-      h+'h '+String(m).padStart(2,'0')+'m '+String(s).padStart(2,'0')+'s';
-  };
-  tick(); setInterval(tick,1000);
+  startCountdown();
 }
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────

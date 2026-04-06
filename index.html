@@ -122,6 +122,17 @@
   .tl-edged:hover{background:var(--accent);color:var(--bg);}
   .day-info{font-size:.52rem;letter-spacing:.1em;color:var(--text-muted);text-align:center;margin-top:10px;line-height:1.8;}
   .day-info span{color:var(--text-dim);}
+  /* STREAK */
+  .streak-wrap{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+  .streak-row{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:10px;}
+  .streak-count{font-size:2rem;font-weight:700;font-family:'Space Mono',monospace;color:var(--accent);line-height:1;}
+  .streak-label{font-size:.48rem;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase;line-height:1.4;}
+  .streak-days{display:flex;gap:5px;justify-content:center;margin-top:4px;}
+  .streak-pip{width:26px;height:26px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.6rem;}
+  .sp-success{background:rgba(232,84,122,.15);border-color:var(--accent);color:var(--accent);}
+  .sp-fail   {background:rgba(91,155,213,.1); border-color:var(--blue);  color:var(--blue);}
+  .sp-miss   {background:var(--surface2);     border-color:var(--border);color:var(--text-muted);}
+  .sp-today  {background:rgba(232,84,122,.08);border-color:var(--accent2);color:var(--accent2);}
   .tl-bar-wrap{width:180px;height:2px;background:var(--surface2);}
   .tl-bar{height:100%;background:var(--accent2);}
 
@@ -264,6 +275,7 @@
       <div class="divider"></div>
       <p class="result-msg" id="resMsg"></p>
       <div class="day-info" id="dayInfo"></div>
+      <div class="streak-wrap" id="streakResult"></div>
     </div>
     <div class="share-box" id="shareBox"></div>
     <button class="btn btn-gold" onclick="doShare()">Copy Result to Share</button>
@@ -274,10 +286,12 @@
 
   <div id="scrAlready" class="hidden fade-in">
     <div class="card already-wrap">
-      <span class="already-emoji">🔥</span>
+      <span class="already-emoji" id="alreadyEmoji">🔥</span>
       <div class="already-title">Already played today.</div>
-      <p class="small-note" style="margin-bottom:14px;">Your score is saved. Share it with your group.</p>
-      <div class="reset-countdown">Next challenge in <span id="resetTimer" style="color:var(--accent2);">—</span></div>
+      <div class="streak-wrap" id="streakAlready"></div>
+      <div style="margin-top:12px;">
+        <div class="reset-countdown">Next challenge in <span id="resetTimer" style="color:var(--accent2);">—</span></div>
+      </div>
     </div>
     <div class="divider"></div>
     <div class="share-box" id="shareBoxReplay"></div>
@@ -914,8 +928,9 @@ function stageComplete(i) {
     if (i+1>=TOTAL) {
       const day = dayNum();
       save({ day, stagesReached:TOTAL, outcome:'completed', ratings:G.ratings });
+      saveToHistory(day, 'completed');
       document.getElementById('shareFinal').innerHTML =
-        buildShareHTML(day, TOTAL, 'completed', G.ratings);
+        buildShareHTML(day, TOTAL, 'completed', G.ratings, getShareStreak(day));
       renderDayInfo('dayInfoFinal');
       showScr('FinalEdge');
     } else {
@@ -1062,8 +1077,10 @@ function endGame(stagesReached, outcome) {
     pool[day%pool.length].replace(/\{s\}/g,stagesReached);
   renderColourRow('colourRow',G.ratings,stagesReached,outcome);
   document.getElementById('shareBox').innerHTML =
-    buildShareHTML(day,stagesReached,outcome,G.ratings);
+    buildShareHTML(day,stagesReached,outcome,G.ratings,getShareStreak(day));
   renderDayInfo('dayInfo');
+  saveToHistory(day, outcome);
+  renderStreak('streakResult', day, outcome);
   if (outcome==='came')        updatePip(stagesReached-1,'came');
   else if (outcome!=='completed') updatePip(stagesReached-1,'stopped');
   showScr('Result');
@@ -1112,37 +1129,47 @@ function buildEmojiRow(reached, outcome, ratings) {
   }).join('');
 }
 
-function buildShareText(day, reached, outcome, ratings) {
+function buildShareText(day, reached, outcome, ratings, streak) {
   const oe  = {completed:'🔥',edged:'✅',came:'💦'}[outcome]||'✅';
   const row = buildEmojiRow(reached,outcome,ratings);
-  return [
+  const streakLine = (streak && streak > 0) ? '🔥 '+streak+' day streak' : null;
+  const lines = [
     DIVIDER,
     'The Daily Edge — Day '+day,
     'Stage '+reached+'/'+TOTAL+' '+oe,
     OUTCOME_LABEL[outcome]||OUTCOME_LABEL.edged,
-    row,
-    SHARE_URL,
-    DIVIDER,
-  ].join('\n');
+  ];
+  if (streakLine) lines.push(streakLine);
+  lines.push(row, SHARE_URL, DIVIDER);
+  return lines.join('\n');
 }
 
-function buildShareHTML(day, reached, outcome, ratings) {
+function buildShareHTML(day, reached, outcome, ratings, streak) {
   const oe  = {completed:'🔥',edged:'✅',came:'💦'}[outcome]||'✅';
   const row = buildEmojiRow(reached,outcome,ratings);
-  return [
+  const streakLine = (streak && streak > 0) ? '🔥 '+streak+' day streak' : null;
+  const lines = [
     `<span class="share-divider">${DIVIDER}</span>`,
     `<span>The Daily Edge — Day ${day}</span>`,
     `<span>Stage ${reached}/${TOTAL} ${oe}</span>`,
     `<span>${OUTCOME_LABEL[outcome]||OUTCOME_LABEL.edged}</span>`,
+  ];
+  if (streakLine) lines.push(`<span>${streakLine}</span>`);
+  lines.push(
     `<span class="share-emoji-row">${row}</span>`,
-    `<span>curiouspirategames.github.io/thedailyedge</span>`,
+    `<span>https://curiouspirategames.github.io/thedailyedge</span>`,
     `<span class="share-divider">${DIVIDER}</span>`,
-  ].join('\n');
+  );
+  return lines.join('\n');
 }
 
-function doShare()       { const s=loadSaved(); if(s) clip(buildShareText(s.day,s.stagesReached,s.outcome,s.ratings),'copyConfirm'); }
-function doShareFinal()  { const s=loadSaved(); if(s) clip(buildShareText(s.day,s.stagesReached,s.outcome,s.ratings),'copyConfirmFinal'); }
-function doShareReplay() { const s=loadSaved(); if(s) clip(buildShareText(s.day,s.stagesReached,s.outcome,s.ratings),'copyConfirmReplay'); }
+function getShareStreak(day) {
+  return calcStreak(loadHistory(), day);
+}
+
+function doShare()       { const s=loadSaved(); if(s) clip(buildShareText(s.day,s.stagesReached,s.outcome,s.ratings,getShareStreak(s.day)),'copyConfirm'); }
+function doShareFinal()  { const s=loadSaved(); if(s) clip(buildShareText(s.day,s.stagesReached,s.outcome,s.ratings,getShareStreak(s.day)),'copyConfirmFinal'); }
+function doShareReplay() { const s=loadSaved(); if(s) clip(buildShareText(s.day,s.stagesReached,s.outcome,s.ratings,getShareStreak(s.day)),'copyConfirmReplay'); }
 
 function clip(text,fbId) {
   const done=()=>{ const el=document.getElementById(fbId); el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),2500); };
@@ -1185,9 +1212,121 @@ function showAlready(saved) {
     else if (isStop) updatePip(i,saved.outcome==='came'?'came':'stopped');
   }
   document.getElementById('shareBoxReplay').innerHTML =
-    buildShareHTML(saved.day,saved.stagesReached,saved.outcome,saved.ratings);
+    buildShareHTML(saved.day,saved.stagesReached,saved.outcome,saved.ratings,getShareStreak(saved.day));
+
+  // Set emoji and render streak
+  const history = loadHistory();
+  const streak  = calcStreak(history, saved.day);
+  const emojiEl = document.getElementById('alreadyEmoji');
+  if (emojiEl) {
+    if (streak >= 7)     emojiEl.textContent = '🔥';
+    else if (streak >= 3) emojiEl.textContent = '✨';
+    else                  emojiEl.textContent = '✦';
+  }
+  renderStreak('streakAlready', saved.day, saved.outcome);
+
   showScr('Already');
   startCountdown();
+}
+
+// ─── STREAK ───────────────────────────────────────────────────────────────────
+const STREAK_KEY = 'dailyEdge_streak';
+
+// A streak day = outcome is 'completed' or 'edged'
+function isStreakDay(outcome) {
+  return outcome === 'completed' || outcome === 'edged';
+}
+
+// Load full history: [{day, outcome}]
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(STREAK_KEY)) || []; }
+  catch { return []; }
+}
+
+// Save today's result into history (upsert by day number)
+function saveToHistory(day, outcome) {
+  const history = loadHistory();
+  const idx = history.findIndex(h => h.day === day);
+  if (idx >= 0) history[idx] = { day, outcome };
+  else history.push({ day, outcome });
+  // Keep only last 60 days to avoid unbounded growth
+  history.sort((a,b) => a.day - b.day);
+  const trimmed = history.slice(-60);
+  localStorage.setItem(STREAK_KEY, JSON.stringify(trimmed));
+}
+
+// Calculate current streak (consecutive days ending today where isStreakDay)
+function calcStreak(history, todayDay) {
+  if (!history.length) return 0;
+  const byDay = {};
+  history.forEach(h => { byDay[h.day] = h.outcome; });
+  let streak = 0;
+  let d = todayDay;
+  while (true) {
+    const outcome = byDay[d];
+    if (!outcome || !isStreakDay(outcome)) break;
+    streak++;
+    d--;
+  }
+  return streak;
+}
+
+// Get last 7 days of history relative to today
+function getLast7(history, todayDay) {
+  const byDay = {};
+  history.forEach(h => { byDay[h.day] = h.outcome; });
+  const days = [];
+  for (let d = todayDay - 6; d <= todayDay; d++) {
+    days.push({ day: d, outcome: byDay[d] || null });
+  }
+  return days;
+}
+
+// Render streak into a container element
+function renderStreak(elId, todayDay, todayOutcome) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+
+  const history = loadHistory();
+  const streak  = calcStreak(history, todayDay);
+  const last7   = getLast7(history, todayDay);
+
+  // Streak count row
+  const streakRow = document.createElement('div');
+  streakRow.className = 'streak-row';
+
+  const countWrap = document.createElement('div');
+  const count = document.createElement('div');
+  count.className = 'streak-count';
+  count.textContent = streak;
+  const label = document.createElement('div');
+  label.className = 'streak-label';
+  label.textContent = streak === 1 ? 'day streak' : 'day streak';
+  countWrap.appendChild(count);
+  countWrap.appendChild(label);
+  streakRow.appendChild(countWrap);
+  el.appendChild(streakRow);
+
+  // Last 7 days pips
+  const daysRow = document.createElement('div');
+  daysRow.className = 'streak-days';
+  last7.forEach(({ day, outcome }) => {
+    const pip = document.createElement('div');
+    const isToday = day === todayDay;
+    if (outcome === null) {
+      pip.className = 'streak-pip sp-miss';
+      pip.textContent = '·';
+    } else if (isStreakDay(outcome)) {
+      pip.className = 'streak-pip ' + (isToday ? 'sp-today' : 'sp-success');
+      pip.textContent = '✦';
+    } else {
+      pip.className = 'streak-pip sp-fail';
+      pip.textContent = '·';
+    }
+    pip.title = day === todayDay ? 'Today' : 'Day ' + day;
+    daysRow.appendChild(pip);
+  });
+  el.appendChild(daysRow);
 }
 
 // ─── STORAGE ──────────────────────────────────────────────────────────────────

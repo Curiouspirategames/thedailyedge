@@ -201,6 +201,29 @@
 
   .divider{border:none;border-top:1px solid var(--border);margin:14px 0;}
   .small-note{font-size:.68rem;letter-spacing:.05em;color:var(--text-muted);text-align:center;line-height:1.7;}
+  /* FINAL METRONOME */
+  .final-metro-wrap{margin-top:16px;padding-top:16px;border-top:1px solid var(--border);}
+  .final-metro-toggle{font-size:.68rem;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase;
+    background:none;border:1px solid var(--border);font-family:'Space Mono',monospace;
+    padding:8px 16px;cursor:pointer;transition:all .2s;display:block;margin:0 auto 14px;}
+  .final-metro-toggle:hover{border-color:var(--text-dim);color:var(--text-dim);}
+  .final-metro-inner{display:none;}
+  .final-metro-inner.open{display:block;}
+  .final-metro-radar{display:flex;flex-direction:column;align-items:center;margin-bottom:14px;}
+  .slider-wrap{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+  .slider-wrap input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:4px;
+    background:var(--border);border-radius:2px;outline:none;cursor:pointer;}
+  .slider-wrap input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;
+    border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg);}
+  .slider-wrap input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;
+    background:var(--accent);cursor:pointer;border:2px solid var(--bg);}
+  .slider-bpm{font-size:1.2rem;font-weight:700;color:var(--accent);min-width:44px;text-align:right;}
+  .slider-label{font-size:.6rem;letter-spacing:.15em;color:var(--text-muted);text-transform:uppercase;text-align:center;margin-bottom:12px;}
+  .final-metro-mute{background:none;border:1px solid var(--border);color:var(--text-muted);
+    font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:.1em;
+    padding:6px 14px;cursor:pointer;transition:all .2s;display:block;margin:0 auto;}
+  .final-metro-mute:hover{border-color:var(--text-dim);color:var(--text-dim);}
+  .final-metro-mute.muted{opacity:.4;}
   .hidden{display:none!important;}
   .fade-in{animation:fadeIn .35s ease;}
   @keyframes fadeIn{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:translateY(0);}}
@@ -269,6 +292,30 @@
         Now <em>bring yourself to the edge.</em><br><br>
         Take as long as you need. When you're right at the limit, hold it there for as long as you can. Then stop.
       </p>
+      <!-- OPTIONAL METRONOME -->
+      <div class="final-metro-wrap">
+        <button class="final-metro-toggle" onclick="toggleFinalMetro()">Use metronome →</button>
+        <div class="final-metro-inner" id="finalMetroInner">
+          <div class="final-metro-radar">
+            <div class="radar-wrap" style="width:120px;height:120px;margin-bottom:12px;">
+              <div class="radar-outer"></div>
+              <div class="radar-ring" id="finalRadarRing" style="width:16px;height:16px;"></div>
+              <div class="radar-core" id="finalRadarCore" style="width:16px;height:16px;"></div>
+            </div>
+            <div class="metro-bpm-row">
+              <div class="metro-bpm" id="finalMetroBpm" style="font-size:2rem;">60</div>
+              <div class="metro-bpm-unit">bpm</div>
+            </div>
+          </div>
+          <div class="slider-label">Set your own speed</div>
+          <div class="slider-wrap">
+            <span style="font-size:.6rem;color:var(--text-muted);">20</span>
+            <input type="range" id="finalMetroSlider" min="20" max="160" value="60" oninput="onFinalSlider(this.value)">
+            <span style="font-size:.6rem;color:var(--text-muted);">160</span>
+          </div>
+          <button class="final-metro-mute" id="finalMetroMuteBtn" onclick="toggleFinalMute()">tap to mute</button>
+        </div>
+      </div>
     </div>
     <div class="share-box" id="shareFinal"></div>
     <div class="day-info" id="dayInfoFinal"></div>
@@ -311,7 +358,7 @@
   </div>
 </div>
 
-<div id="tlOverlay" class="tl-overlay hidden">
+<div id="tlOverlay" class="tl-overlay hidden" aria-hidden="true">
   <div class="tl-prompt" id="tlPrompt"></div>
   <div class="tl-sub">Rate that stage</div>
   <div class="tl-btns">
@@ -626,13 +673,14 @@ const THEME_NAMES = Object.keys(THEMES);
 // ─── STAGE SLOT DEFINITIONS ───────────────────────────────────────────────────
 // Wide lo/hi BPM ranges — daily difficulty multiplier and theme bpmBias scale within.
 // dur: [min, max] total stage seconds (60–120).
-// anchor: 'gentle' = stages 1-2 always gentle regardless of theme/difficulty
-//         'brutal' = stages 9-10 always intense regardless
-//         null     = theme + difficulty driven
+// anchor: 'gentle'      = stage 1: always gentle regardless of theme/difficulty
+//         'transitional' = stage 2: varied patterns but moderate BPMs, capped difficulty
+//         'brutal'      = stages 9-10: always intense regardless
+//         null          = theme + difficulty driven
 
 const STAGE_SLOTS = [
   { lo:[22,34], hi:[36,52],   dur:[60,85],  intensity:1,  anchor:'gentle' },
-  { lo:[32,44], hi:[48,66],   dur:[60,88],  intensity:2,  anchor:'gentle' },
+  { lo:[38,54], hi:[58,80],   dur:[62,92],  intensity:3,  anchor:'transitional' },
   { lo:[40,66], hi:[62,96],   dur:[65,100], intensity:3,  anchor:null },
   { lo:[50,80], hi:[74,108],  dur:[65,102], intensity:5,  anchor:null },
   { lo:[58,92], hi:[84,122],  dur:[68,105], intensity:6,  anchor:null },
@@ -678,9 +726,12 @@ function buildDailyStages() {
     // Apply difficulty multiplier and theme bpmBias to scale within the slot range.
     let bpmMult = diff.mult;
     if (slot.anchor === 'gentle') {
-      // Anchor stages: gentle always stays gentle regardless of difficulty.
-      // Use 0.85 mult max so hard days don't make stage 1 brutal.
+      // Stage 1: always stays gentle — cap multiplier so hard days don't brutalise it
       bpmMult = Math.min(bpmMult, 0.88);
+    } else if (slot.anchor === 'transitional') {
+      // Stage 2: varies with theme/difficulty but capped — bridges stage 1 and the main game
+      bpmMult = Math.min(bpmMult, 1.05); // max slightly above normal
+      bpmMult = Math.max(bpmMult, 0.85); // min still a step up from stage 1
     } else if (slot.anchor === 'brutal') {
       // Anchor stages: brutal always stays brutal regardless of difficulty.
       // Use 1.05 mult min so easy days still end hard.
@@ -702,6 +753,9 @@ function buildDailyStages() {
     let pool;
     if (slot.anchor === 'gentle') {
       pool = theme.pools.early;
+    } else if (slot.anchor === 'transitional') {
+      // Stage 2: uses early pool patterns but also allows surge/wave — no extreme patterns
+      pool = ['plateau','escalator','wave','surge','grind','slowBurn'].filter(p => PATTERNS[p]);
     } else if (slot.anchor === 'brutal') {
       pool = theme.pools.late;
     } else {
@@ -851,13 +905,6 @@ function showSpeedIndicator(dir) {
 }
 
 // ─── SCREENS ──────────────────────────────────────────────────────────────────
-function showScr(name) {
-  ['Welcome','Stage','FinalEdge','Result','Already'].forEach(n =>
-    document.getElementById('scr'+n).classList.add('hidden')
-  );
-  const el = document.getElementById('scr'+name);
-  el.classList.remove('hidden'); el.classList.add('fade-in');
-}
 
 // ─── TRACK ────────────────────────────────────────────────────────────────────
 function buildTrack() {
@@ -879,6 +926,13 @@ function updatePip(i, state) {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 function init() {
+  migrateOldSaves(); // carry forward any save from a previous version key
+  // Safety: always ensure TL overlay is hidden on load
+  document.getElementById('tlOverlay').classList.add('hidden');
+  // Clear any stale TL state
+  G.tlResolve = null;
+  if (G.tlTimeout) { clearTimeout(G.tlTimeout); G.tlTimeout = null; }
+
   document.getElementById('dayBadge').textContent = 'Day '+dayNum();
   buildTrack();
   const saved = loadSaved();
@@ -1241,7 +1295,107 @@ function showAlready(saved) {
   startCountdown();
 }
 
-// ─── STREAK ───────────────────────────────────────────────────────────────────
+// ─── FINAL METRONOME ─────────────────────────────────────────────────────────
+// Optional free-running metronome on the final edge screen.
+// Uses the same Web Audio engine as the main metronome.
+// Completely independent — no token system needed, just a simple on/off.
+
+const FM = { token:0, bpm:60, muted:false, active:false };
+
+function toggleFinalMetro() {
+  const inner  = document.getElementById('finalMetroInner');
+  const toggle = document.querySelector('.final-metro-toggle');
+  if (!inner) return;
+  const isOpen = inner.classList.contains('open');
+  if (isOpen) {
+    inner.classList.remove('open');
+    if (toggle) toggle.textContent = 'Use metronome →';
+    stopFinalMetro();
+  } else {
+    inner.classList.add('open');
+    if (toggle) toggle.textContent = 'Hide metronome ↑';
+    try { getAC().resume(); } catch(e) {}
+    startFinalMetro();
+  }
+}
+
+function startFinalMetro() {
+  stopFinalMetro();
+  FM.active = true;
+  FM.token++;
+  const token = FM.token;
+  const ac    = getAC();
+  let nextBeat = ac.currentTime + 0.05;
+
+  function scheduler() {
+    if (FM.token !== token || !FM.active) return;
+    const interval = 60 / FM.bpm;
+    while (nextBeat < ac.currentTime + 0.12) {
+      scheduleFinalClick(nextBeat);
+      scheduleFinalPulse(nextBeat, FM.bpm, token);
+      nextBeat += interval;
+    }
+    FM.schedId = setTimeout(scheduler, 25);
+  }
+  scheduler();
+}
+
+function scheduleFinalClick(atTime) {
+  if (FM.muted) return;
+  try {
+    const ac=getAC(), o=ac.createOscillator(), g=ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type='sine'; o.frequency.value=700;
+    g.gain.setValueAtTime(0.22, atTime);
+    g.gain.exponentialRampToValueAtTime(0.001, atTime+0.06);
+    o.start(atTime); o.stop(atTime+0.07);
+  } catch(e){}
+}
+
+function scheduleFinalPulse(atAudioTime, bpm, token) {
+  const delayMs = (atAudioTime - getAC().currentTime) * 1000;
+  setTimeout(() => {
+    if (FM.token !== token) return;
+    const durMs = Math.round(60000 / bpm);
+    const ring = document.getElementById('finalRadarRing');
+    const core = document.getElementById('finalRadarCore');
+    if (ring) {
+      ring.style.setProperty('--beat-dur', durMs+'ms');
+      ring.classList.remove('fire'); void ring.offsetWidth; ring.classList.add('fire');
+    }
+    if (core) { core.classList.remove('pop'); void core.offsetWidth; core.classList.add('pop'); }
+  }, Math.max(0, delayMs));
+}
+
+function stopFinalMetro() {
+  FM.active = false;
+  FM.token++;
+  if (FM.schedId) { clearTimeout(FM.schedId); FM.schedId = null; }
+}
+
+function onFinalSlider(val) {
+  FM.bpm = parseInt(val);
+  const el = document.getElementById('finalMetroBpm');
+  if (el) el.textContent = FM.bpm;
+  // Restart so new BPM takes effect cleanly
+  if (FM.active) startFinalMetro();
+}
+
+function toggleFinalMute() {
+  FM.muted = !FM.muted;
+  const b = document.getElementById('finalMetroMuteBtn');
+  if (b) { b.textContent = FM.muted ? 'tap to unmute' : 'tap to mute'; b.classList.toggle('muted', FM.muted); }
+}
+
+// Stop final metro whenever we leave the final edge screen
+function showScr(name) {
+  if (name !== 'FinalEdge') stopFinalMetro();
+  ['Welcome','Stage','FinalEdge','Result','Already'].forEach(n =>
+    document.getElementById('scr'+n).classList.add('hidden')
+  );
+  const el = document.getElementById('scr'+name);
+  el.classList.remove('hidden'); el.classList.add('fade-in');
+}
 const STREAK_KEY = 'dailyEdge_streak';
 
 // A streak day = outcome is 'completed' or 'edged'
@@ -1344,6 +1498,27 @@ function renderStreak(elId, todayDay, todayOutcome) {
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 function save(d)     { localStorage.setItem(KEY,JSON.stringify(d)); }
 function loadSaved() { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }
+
+// ─── MIGRATION ────────────────────────────────────────────────────────────────
+// If a player has a saved result from an older key version, migrate it to the
+// current key so their result is recognised and streaks are unaffected.
+function migrateOldSaves() {
+  if (localStorage.getItem(KEY)) return; // already have current key, nothing to do
+  const oldKeys = ['dailyEdge_v12','dailyEdge_v11','dailyEdge_v10','dailyEdge_v9','dailyEdge_v8'];
+  for (const oldKey of oldKeys) {
+    try {
+      const raw = localStorage.getItem(oldKey);
+      if (!raw) continue;
+      const data = JSON.parse(raw);
+      // Only migrate if it's a real result (not a reset) and matches today
+      if (data && data.day === dayNum() && data.outcome && data.outcome !== 'reset') {
+        localStorage.setItem(KEY, raw);
+        console.log('Migrated save from', oldKey, 'to', KEY);
+        return;
+      }
+    } catch(e) { /* ignore corrupt old saves */ }
+  }
+}
 
 init();
 </script>
